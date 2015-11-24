@@ -5,8 +5,10 @@ from keras.datasets.data_utils import get_file
 
 from keras.models import Sequential
 from keras.layers.embeddings import Embedding
-from keras.layers.core import Dense, Activation, Dropout
+from keras.layers.core import Dense, Activation, Dropout, TimeDistributedDense
 from keras.layers.recurrent import LSTM
+
+import sys
 import numpy as np
 ALPHABET_SIZE = 4
 # cut the text in semi-redundant sequences of maxlen characters
@@ -20,14 +22,8 @@ X_train = [] #sentences to generate
 y_train  = []
 
 for seq in seqs:
-    for i in range(1, len(seq)):
-        padding = np.zeros(((maxlen - i) , 4))
-        sub_list = np.concatenate([padding, np.asarray(seq[:i])])
-        #sub_list = np.asarray(seq[:i])
-        X_train.append(sub_list)
-        y_train.append(np.asarray(seq[i]))
-
-print "Shape of DNA :", np.asarray(X_train).shape       
+	X_train.append(np.asarray(seq[1:]))
+	y_train.append(np.asarray(seq[:-1]))
 
 
 
@@ -40,14 +36,17 @@ embedding_size=(4) #samples x length x dim
 model = Sequential()
 #model.add(Embedding(max_features, embedding_size, mask_zero=True))
 #model.add(Embedding(input_shape=(maxlen, 4), output_dim=(maxlen, 4), mask_zero=True, init="uniform"))
-model.add(LSTM(32, return_sequences=False, input_shape=(maxlen, 4)))
+model.add(LSTM(int(sys.argv[1]), return_sequences=True, input_shape=(maxlen, 4)))
 model.add(Dropout(0.2))
-model.add(Dense(4))
+model.add(TimeDistributedDense(4))
 model.add(Activation('softmax'))
 
-print "Compile model"
 model.compile(loss='categorical_crossentropy', optimizer='rmsprop')
 
-print "fitting"
-model.fit(np.asarray(X_train), np.asarray(y_train), batch_size=1, nb_epoch=1)
-print model.predict(np.asarray(X_train))
+import time
+starttime = time.time()
+model.fit(np.asarray(X_train), np.asarray(y_train), batch_size=1, nb_epoch=20 )
+endtime = time.time()
+times.append(endtime - starttime)
+from scipy import mean
+print mean(times), model.evaluate(X_train, y_train)
